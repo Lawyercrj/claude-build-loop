@@ -1,0 +1,21 @@
+{
+  "name": "claude-build-loop",
+  "version": "0.1.0",
+  "description": "Automated build orchestrator that drives changes in a target repo, step by step, with human approval — built on the Claude Agent SDK",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --env-file=.env.local dist/index.js",
+    "dev": "node --env-file=.env.local -r ts-node/register src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.161",
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
