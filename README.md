@@ -17,6 +17,30 @@ This tool operates on a **target repository** that you point it at — it never
 modifies its own folder. You set the target with the `TARGET_REPO` environment
 variable; every change the loop makes lands in that repo, on a feature branch.
 
+## Quickstart
+
+**You'll need:** Node.js 18+, an Anthropic API key with available credit, and a
+target repo you want the loop to work on (with a branch named
+`chore/build-loop-smoke-test` already created in it for the included smoke test).
+
+```bash
+# 1. Clone and install
+git clone https://github.com/Lawyercrj/claude-build-loop.git
+cd claude-build-loop
+npm install
+
+# 2. Configure
+cp .env.example .env.local
+# then edit .env.local: set ANTHROPIC_API_KEY and TARGET_REPO
+
+# 3. Run the smoke test (creates one test file in your target repo, with your approval)
+npm run dev -- docs/plans/smoke-test.md
+```
+
+That's it — you'll see the reviewer's verdict and an approve / request-changes /
+stop prompt. From here, write your own plan file in `docs/plans/` (see
+[Plan files](#plan-files)).
+
 ## How it works
 
 You describe a build as an ordered list of steps in a plan file. For each step
