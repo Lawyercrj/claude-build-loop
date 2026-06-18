@@ -185,6 +185,21 @@ npm start -- docs/plans/smoke-test.md
 | `.env.example` | Copyable template for `.env.local` |
 | `docs/plans/smoke-test.md` | Starter plan — one-step smoke test |
 
+## Contributing
+
+Issues and pull requests are welcome.
+
+- **Found a bug or have an idea?** Open an
+  [issue](https://github.com/Lawyercrj/claude-build-loop/issues) — describe what
+  you expected, what happened, and your Node version if it's a bug.
+- **Want to send a change?** Open a pull request. Smaller, focused PRs are easier
+  to review and land faster. For anything large, opening an issue first to discuss
+  the direction saves everyone time.
+- Please make sure `npm run build` passes before submitting.
+
+This is a small, community-built tool — friendly contributions of any size are
+appreciated.
+
 ## License
 
 MIT — see the [LICENSE](LICENSE) file.
