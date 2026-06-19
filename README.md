@@ -120,10 +120,24 @@ The executor agent runs under `PreToolUse` hooks ([`src/safety.ts`](src/safety.t
 that protect the target repo from unrecoverable actions. Each blocked command is
 written to the audit log and an alert is sent. The hooks deny:
 
-- **File deletion** — `rm`, `rmdir`, `unlink`, `git rm`, `find … -delete`
+- **File deletion / truncation** — `rm`, `rmdir`, `unlink`, `git rm`,
+  `find … -delete`, `truncate`, `dd`
 - **Commits to `main` or `master`**
 - **Force-push** — `git push --force` / `-f`
 - **Hard reset or rebase** — `git reset --hard`, `git rebase`
+- **Work-losing git operations** — `git clean`, `git stash`, `git checkout`,
+  `git switch`, `git restore`
+- **Writes/edits outside the target repo** — every `Write`/`Edit` `file_path` is
+  resolved (following symlinks and `..`) and denied if it lands outside the
+  target repo, so an absolute path can't clobber files elsewhere on disk.
+
+> **Known limitation:** plain shell redirection (`> file`, `>> file`) is **not**
+> caught. Reliably detecting it would need a real shell parser (quoting,
+> here-docs, `2>&1`, process substitution …), which a regex can't do without
+> excessive false positives/negatives. Deletion, truncation, and the git
+> operations above are still blocked.
+
+The classifiers are covered by unit tests — run them with `npm test`.
 
 ## Setup
 
