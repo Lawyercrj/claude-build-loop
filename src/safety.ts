@@ -56,11 +56,6 @@ function deny(hookEventName: string, reason: string) {
 // Deletion / truncation patterns — word-boundary safe, won't match "perform"
 // or "format". Covers outright deletion plus in-place truncation/overwrite of
 // existing files (truncate, dd).
-//
-// NOTE: plain shell redirection (`> file`, `>> file`) is deliberately NOT
-// matched here. Catching it reliably needs a real shell parser (quoting,
-// here-docs, `2>&1`, process substitution …); a naive regex produces too many
-// false positives/negatives. See README "Safety" for this known limitation.
 // ---------------------------------------------------------------------------
 
 const DELETION_PATTERNS: RegExp[] = [
@@ -101,6 +96,34 @@ export function matchDeletion(command: string): RegExp | null {
 
 export function matchDestructiveGit(command: string): RegExp | null {
   return DESTRUCTIVE_GIT_PATTERNS.find((p) => p.test(command)) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Truncating output redirection INTO a file — `> file`, `1> file`, `&> file`,
+// `2> file` (and the no-space `x>file` form) all overwrite their target. We
+// must NOT flag:
+//   - `>> file` / `2>> file`  (append, not truncate)
+//   - `2>&1` / `1>&2` / `>&2`  (stream duplication, no file target)
+//   - `> /dev/null` / `2> /dev/null`  (discarding output)
+//
+// Anatomy of the match: a single `>` that is
+//   (?<!>)     not the tail of a `>>` append
+//   (?![>&])   not the head of `>>` or a `>&` stream-dup
+//   \s*        followed (after optional space) by a file target that is
+//   (?!\/dev\/null\b)  not /dev/null
+//   ([^\s|&;<>]+)      and is a real path-ish token
+// The optional fd prefix (1/2/&) sits to the left of the `>` and needs no
+// special handling — the `>` itself is what we anchor on.
+//
+// This is pattern-matching, NOT a shell parser: exotic quoting, here-docs,
+// variable-indirected paths, and process substitution can still slip past.
+// See README "Safety".
+// ---------------------------------------------------------------------------
+
+const DANGEROUS_REDIRECT = /(?<!>)>(?![>&])\s*(?!\/dev\/null\b)[^\s|&;<>]+/;
+
+export function matchDangerousRedirect(command: string): RegExp | null {
+  return DANGEROUS_REDIRECT.test(command) ? DANGEROUS_REDIRECT : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +181,15 @@ export function buildSafetyHooks(targetRepo: string) {
       const ts = new Date().toISOString();
       appendAuditLog(`${ts} [BLOCKED:deletion] ${command.slice(0, 500)}`);
       void sendTelegramAlert("⚠️ I stopped the contractor from deleting or truncating a file. The full command is in the audit log.");
+      return deny(preInput.hook_event_name, reason);
+    }
+
+    const redirect = matchDangerousRedirect(command);
+    if (redirect) {
+      const reason = `Truncating output redirection into a file is not allowed (matched: ${redirect}). Command: ${command.slice(0, 200)}`;
+      const ts = new Date().toISOString();
+      appendAuditLog(`${ts} [BLOCKED:redirect] ${command.slice(0, 500)}`);
+      void sendTelegramAlert("⚠️ I stopped the contractor from overwriting a file via shell redirection. The full command is in the audit log.");
       return deny(preInput.hook_event_name, reason);
     }
     return {};

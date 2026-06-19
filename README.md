@@ -122,6 +122,10 @@ written to the audit log and an alert is sent. The hooks deny:
 
 - **File deletion / truncation** — `rm`, `rmdir`, `unlink`, `git rm`,
   `find … -delete`, `truncate`, `dd`
+- **Truncating output redirection into a file** — `> file`, `1> file`,
+  `&> file`, `2> file` (and the no-space `x>file` form) all overwrite their
+  target. Append (`>> file`), stream duplication (`2>&1`, `> /dev/null`) are
+  allowed.
 - **Commits to `main` or `master`**
 - **Force-push** — `git push --force` / `-f`
 - **Hard reset or rebase** — `git reset --hard`, `git rebase`
@@ -131,11 +135,12 @@ written to the audit log and an alert is sent. The hooks deny:
   resolved (following symlinks and `..`) and denied if it lands outside the
   target repo, so an absolute path can't clobber files elsewhere on disk.
 
-> **Known limitation:** plain shell redirection (`> file`, `>> file`) is **not**
-> caught. Reliably detecting it would need a real shell parser (quoting,
-> here-docs, `2>&1`, process substitution …), which a regex can't do without
-> excessive false positives/negatives. Deletion, truncation, and the git
-> operations above are still blocked.
+> **Known limitation:** the redirection check is **pattern-matching, not a shell
+> parser**. It narrows the gap — a stray `> src/safety.ts` is caught — but it is
+> **not airtight**. Exotic quoting, here-docs, variable-indirected paths
+> (`> $OUT`), and process substitution can still slip past. Append and
+> stream-duplication forms (`>>`, `2>&1`, `> /dev/null`) are intentionally left
+> through.
 
 The classifiers are covered by unit tests — run them with `npm test`.
 

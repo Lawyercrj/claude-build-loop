@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { resolve } from "path";
-import { matchDeletion, matchDestructiveGit, pathIsInsideRepo } from "../src/safety";
+import {
+  matchDeletion,
+  matchDestructiveGit,
+  matchDangerousRedirect,
+  pathIsInsideRepo,
+} from "../src/safety";
 
 // The build-loop repo root — a real directory on disk, used as a stand-in for
 // the executor's target repo so containment checks resolve real paths.
@@ -54,6 +59,39 @@ describe("Bash deletion / destructive-git patterns", () => {
   for (const [label, command] of ALLOWED) {
     it(`ALLOWS: ${label}`, () => {
       expect(isBlocked(command)).toBe(false);
+    });
+  }
+});
+
+describe("Dangerous output-redirection patterns", () => {
+  const DENIED: Array<[string, string]> = [
+    ["truncating > into file", "echo x > file.ts"],
+    ["truncating > into source", "cat a > src/safety.ts"],
+    ["fd 1> redirect", "printf x 1> out.txt"],
+    ["&> redirect", "foo &> out.txt"],
+    ["2> stderr into file", "cmd 2> out.txt"],
+    ["no-space x>file form", "cmd>file.ts"],
+  ];
+
+  for (const [label, command] of DENIED) {
+    it(`DENIES: ${label}`, () => {
+      expect(matchDangerousRedirect(command)).not.toBeNull();
+    });
+  }
+
+  const ALLOWED: Array<[string, string]> = [
+    ["append >>", "echo x >> log.txt"],
+    ["stderr->stdout dup", "cmd 2>&1"],
+    ["discard to /dev/null", "cmd > /dev/null"],
+    ["stderr to /dev/null", "cmd 2> /dev/null"],
+    ["bare grep, no redirect", "grep foo bar"],
+    ["git commit", "git commit -m 'wip'"],
+    ["npm test", "npm test"],
+  ];
+
+  for (const [label, command] of ALLOWED) {
+    it(`ALLOWS: ${label}`, () => {
+      expect(matchDangerousRedirect(command)).toBeNull();
     });
   }
 });
